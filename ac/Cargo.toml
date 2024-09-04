@@ -1,0 +1,10 @@
+[package]
+name = "ac"
+version = "0.1.0"
+edition = "2021"
+authors = ["Cody Duong <cody.qd@gmail.com>"]
+license = "MIT"
+
+[dependencies]
+bon = { workspace = true }
+once_cell = { workspace = true }

@@ -1,0 +1,7 @@
+[workspace]
+resolver = "2"
+members = ["ac"]
+
+[workspace.dependencies]
+bon = "2.1.0"
+once_cell = "1.19.0"
