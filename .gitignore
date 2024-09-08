@@ -1,6 +1,5 @@
-./ac
-./ac.exe
-
-# Added by cargo
-
+ac.exe
+ac
+*.a
+*.txt
 /target

@@ -1,30 +1,43 @@
-PROJECT_NAME := a
+PROJECT_NAME := ac
 
-# Default target
+MAIN_DIR = .
+TARGET_DIR = target/release
+UNAME_S := $(shell uname -s | tr '[:upper:]' '[:lower:]')
+
 .PHONY: all
 all: build
 
-# Build the project
+ifeq ($(OS), Windows_NT)
+    EXECUTABLE = $(PROJECT_NAME).exe
+else
+    EXECUTABLE = $(PROJECT_NAME)
+endif
+
+
+ifeq ($(OS), Windows_NT)
 .PHONY: build
 build:
 	cargo build --release
+	cp $(TARGET_DIR)/$(EXECUTABLE) $(MAIN_DIR)/$(EXECUTABLE)
+else
+.PHONY: build
+build:
+	cargo build --release
+	cp $(TARGET_DIR)/$(EXECUTABLE) $(MAIN_DIR)/$(EXECUTABLE)
+endif
 
-# Run tests
 .PHONY: test
 test:
 	cargo test --workspace
 
-# Clean the project
 .PHONY: clean
 clean:
 	cargo clean
 
-# Run the project
 .PHONY: run
 run: build
 	cargo run --release
 
-# Format the code
 .PHONY: format
 format:
 	cargo fmt
