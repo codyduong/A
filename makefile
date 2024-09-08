@@ -13,18 +13,10 @@ else
     EXECUTABLE = $(PROJECT_NAME)
 endif
 
-
-ifeq ($(OS), Windows_NT)
 .PHONY: build
 build:
 	cargo build --release
 	cp $(TARGET_DIR)/$(EXECUTABLE) $(MAIN_DIR)/$(EXECUTABLE)
-else
-.PHONY: build
-build:
-	cargo build --release
-	cp $(TARGET_DIR)/$(EXECUTABLE) $(MAIN_DIR)/$(EXECUTABLE)
-endif
 
 .PHONY: test
 test:
@@ -33,6 +25,8 @@ test:
 .PHONY: clean
 clean:
 	cargo clean
+	rm ./a
+	rm ./a.exe
 
 .PHONY: run
 run: build

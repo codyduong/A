@@ -4,7 +4,9 @@ mod util;
 use clap::command;
 use clap::Parser;
 use std::fs;
+use std::fs::OpenOptions;
 use std::io;
+use std::io::Write;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -23,7 +25,13 @@ fn main() -> io::Result<()> {
 
   let tokens_result = tokens.to_string();
   if let Some(tokens_file) = args.tokens_file {
-    fs::write::<&str, std::string::String>(&*tokens_file, tokens_result)?;
+    let mut file = OpenOptions::new()
+      .write(true)
+      .create(true)
+      .truncate(true)
+      .open(&*tokens_file)?;
+
+    file.write(tokens_result.as_bytes())?;
   } else {
     println!("{}", tokens_result);
   }
