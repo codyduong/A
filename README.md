@@ -4,7 +4,7 @@
 
 ## Specification
 
-The specification is archived here: [Language Specification]()
+The specification is archived here: [Language Specification](https://web.archive.org/web/20240908170812/https://compilers.cool/language/#lexical)
 
 ## Build
 
