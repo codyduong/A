@@ -5,12 +5,24 @@ use crate::util::VecWrapper;
 use crate::util::KEYWORDS;
 use bon::builder;
 
+/**
+ * A postscript
+ * 
+ * - This uses just straight up char matching, no lex-generator
+ *   -> rust has a crate for this which is https://crates.io/crates/pest
+ *   -> a previous students impl uses this https://github.com/brasswood/rust-cmmc
+ * - In retrospect probably should've looked up this before writing all this
+ * - The code here is awfully data oriented, while a struct may have been better
+ *   - passing mut references for col and usize is an undesireable side-effect IMHO, but w/e
+ * 
+ */
+
 #[builder]
 fn parse_string_literal(
   chars: &mut std::iter::Peekable<std::str::Chars<'_>>,
   line: &mut usize,
   column: &mut usize,
-) -> Result<TokenWithMetadata, ScannerError> {
+) -> Result<TokenWithMetadata, LexError> {
   let start = Metadata::new(*line, *column);
   let mut value = String::new();
   let mut illegal_escapes: Vec<(char, Metadata)> = Vec::new();
@@ -24,7 +36,7 @@ fn parse_string_literal(
         *column += 1;
         let end = Metadata::new(*line, *column);
         if illegal_escapes.len() > 0 {
-          return Err(ScannerError::IllegalEscapeInString {
+          return Err(LexError::IllegalEscapeInString {
             start,
             end,
             at: illegal_escapes,
@@ -64,7 +76,7 @@ fn parse_string_literal(
       _ => {
         // we actually support non ascii according to oracle in strings
         // if !c.is_ascii() {
-        //   return Err(ScannerError::IllegalChar { char: c, start, end });
+        //   return Err(LexError::IllegalChar { char: c, start, end });
         // }
         value.push(c);
         chars.next();
@@ -74,14 +86,14 @@ fn parse_string_literal(
   }
 
   if illegal_escapes.len() > 0 {
-    return Err(ScannerError::UnterminatedStringWithIllegalEscape {
+    return Err(LexError::UnterminatedStringWithIllegalEscape {
       start,
       end: Metadata::new(*line, *column),
       at: illegal_escapes,
     });
   }
 
-  Err(ScannerError::UnterminatedString {
+  Err(LexError::UnterminatedString {
     start,
     end: Metadata::new(*line, *column),
   })
@@ -92,7 +104,7 @@ fn parse_keyword_or_identifier(
   chars: &mut std::iter::Peekable<std::str::Chars<'_>>,
   line: &mut usize,
   column: &mut usize,
-) -> Result<TokenWithMetadata, ScannerError> {
+) -> Result<TokenWithMetadata, LexError> {
   let start = Metadata::new(*line, *column);
   let mut value = String::new();
 
@@ -148,7 +160,7 @@ fn parse_int(
   chars: &mut std::iter::Peekable<std::str::Chars<'_>>,
   line: &mut usize,
   column: &mut usize,
-) -> Result<TokenWithMetadata, ScannerError> {
+) -> Result<TokenWithMetadata, LexError> {
   let start = Metadata::new(*line, *column);
   let mut number_str = String::new();
 
@@ -169,16 +181,16 @@ fn parse_int(
       start,
       end,
     }),
-    Err(_e) => return Err(ScannerError::IntegerOverflow { start, end }),
+    Err(_e) => return Err(LexError::IntegerOverflow { start, end }),
   }
 }
 
 // at a certain point this should be refactored. i will now leave this message
 // for the rest of the lifetime of this project
 #[builder]
-pub(crate) fn scanner(input: &str) -> (VecWrapper<TokenWithMetadata>, VecWrapper<ScannerError>) {
+pub(crate) fn lex(input: &str) -> (VecWrapper<TokenWithMetadata>, VecWrapper<LexError>) {
   let mut tokens = Vec::new();
-  let mut errors: Vec<ScannerError> = Vec::new();
+  let mut errors: Vec<LexError> = Vec::new();
   let mut line = 1;
   let mut column = 1;
   let mut chars = input.chars().peekable();
@@ -448,7 +460,7 @@ pub(crate) fn scanner(input: &str) -> (VecWrapper<TokenWithMetadata>, VecWrapper
         }
       }
       '?' => {
-        errors.push(ScannerError::IllegalChar {
+        errors.push(LexError::IllegalChar {
           char: c,
           at: Metadata::new(line, column),
         });
@@ -482,7 +494,7 @@ pub(crate) fn scanner(input: &str) -> (VecWrapper<TokenWithMetadata>, VecWrapper
         }
       }
       _ => {
-        errors.push(ScannerError::IllegalChar {
+        errors.push(LexError::IllegalChar {
           char: c,
           at: Metadata::new(line, column),
         });
@@ -501,7 +513,7 @@ pub(crate) fn scanner(input: &str) -> (VecWrapper<TokenWithMetadata>, VecWrapper
 }
 
 #[derive(Debug, PartialEq)]
-pub(crate) enum ScannerError {
+pub(crate) enum LexError {
   IllegalChar {
     char: char,
     at: Metadata,
@@ -526,10 +538,10 @@ pub(crate) enum ScannerError {
   },
 }
 
-impl std::fmt::Display for ScannerError {
+impl std::fmt::Display for LexError {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
-      ScannerError::IllegalChar { char, at } => {
+      LexError::IllegalChar { char, at } => {
         write!(
           f,
           "FATAL [{},{}]-[{},{}]: Illegal character {}",
@@ -540,22 +552,22 @@ impl std::fmt::Display for ScannerError {
           char
         )
       }
-      ScannerError::UnterminatedString { start, end } => write!(
+      LexError::UnterminatedString { start, end } => write!(
         f,
         "FATAL [{},{}]-[{},{}]: Unterminated string literal detected",
         start.line, start.column, end.line, end.column
       ),
-      ScannerError::UnterminatedStringWithIllegalEscape { start, end, at: _ } => write!(
+      LexError::UnterminatedStringWithIllegalEscape { start, end, at: _ } => write!(
         f,
         "FATAL [{},{}]-[{},{}]: Unterminated string literal with bad escape sequence detected",
         start.line, start.column, end.line, end.column
       ),
-      ScannerError::IllegalEscapeInString { start, end, at: _ } => write!(
+      LexError::IllegalEscapeInString { start, end, at: _ } => write!(
         f,
         "FATAL [{},{}]-[{},{}]: String literal with bad escape sequence detected",
         start.line, start.column, end.line, end.column
       ),
-      ScannerError::IntegerOverflow { start, end } => write!(
+      LexError::IntegerOverflow { start, end } => write!(
         f,
         "FATAL [{},{}]-[{},{}]: Integer literal overflow",
         start.line, start.column, end.line, end.column
@@ -571,7 +583,7 @@ mod tests {
   fn test_keywords() {
     for (keyword, expected_token_kind) in KEYWORDS.iter() {
       let input = *keyword;
-      let results = scanner().input(input).call();
+      let results = lex().input(input).call();
       let tokens = results.0;
       let errors = results.1;
 
@@ -594,7 +606,7 @@ eheh                                                                        \n\
 eheh?                                                                       \n\
 while1                                                                      \n\
 ";
-    let results = scanner().input(&input).call();
+    let results = lex().input(&input).call();
     let tokens = results.0;
     let errors = results.1;
 
@@ -620,7 +632,7 @@ while1                                                                      \n\
     #[rustfmt::skip]
     assert_eq!(tokens[7], TokenWithMetadata { token: Token::Identifier("eheh".to_string()), start: Metadata::new(4, 1), end: Metadata::new(4, 5) } );
     #[rustfmt::skip]
-    assert_eq!(errors[0], ScannerError::IllegalChar { char: '?', at: Metadata::new(4, 5) } );
+    assert_eq!(errors[0], LexError::IllegalChar { char: '?', at: Metadata::new(4, 5) } );
     #[rustfmt::skip]
     assert_eq!(tokens[8], TokenWithMetadata { token: Token::Identifier("while1".to_string()), start: Metadata::new(5, 1), end: Metadata::new(5, 7) } );
 
@@ -639,7 +651,7 @@ while1                                                                      \n\
 \"\\f this line has an unterminated invalid escape                          \n\
 \"\\f this line has an invalid escape\"                                     \n\
 ";
-    let results = scanner().input(&input).call();
+    let results = lex().input(&input).call();
     let tokens = results.0;
     let errors = results.1;
 
@@ -661,11 +673,11 @@ while1                                                                      \n\
     #[rustfmt::skip]
     assert_eq!(tokens[5], TokenWithMetadata { token: Token::StringLiteral("foo".to_string()), start: Metadata::new(5, 22), end: Metadata::new(5, 27) } );
     #[rustfmt::skip]
-    assert_eq!(errors[0], ScannerError::UnterminatedString { start: Metadata::new(6, 1), end: Metadata::new(6, 76) } );
+    assert_eq!(errors[0], LexError::UnterminatedString { start: Metadata::new(6, 1), end: Metadata::new(6, 76) } );
     #[rustfmt::skip]
-    assert_eq!(errors[1], ScannerError::UnterminatedStringWithIllegalEscape { start: Metadata::new(7, 1), end: Metadata::new(7, 75), at: vec![('f', Metadata::new(7, 3))] } );
+    assert_eq!(errors[1], LexError::UnterminatedStringWithIllegalEscape { start: Metadata::new(7, 1), end: Metadata::new(7, 75), at: vec![('f', Metadata::new(7, 3))] } );
     #[rustfmt::skip]
-    assert_eq!(errors[2], ScannerError::IllegalEscapeInString { start: Metadata::new(8, 1), end: Metadata::new(8, 37), at: vec![('f', Metadata::new(8, 3))] } );
+    assert_eq!(errors[2], LexError::IllegalEscapeInString { start: Metadata::new(8, 1), end: Metadata::new(8, 37), at: vec![('f', Metadata::new(8, 3))] } );
 
     assert_eq!(tokens.last().unwrap().token, Token::EOF);
   }
@@ -678,7 +690,7 @@ while1                                                                      \n\
 -2147483647                                                                 \n\
 -2147483648                                                                 \n\
 ";
-    let results = scanner().input(&input).call();
+    let results = lex().input(&input).call();
     let tokens = results.0;
     let errors = results.1;
 
@@ -690,7 +702,7 @@ while1                                                                      \n\
     #[rustfmt::skip]
     assert_eq!(tokens[0], TokenWithMetadata { token: Token::IntLiteral(2147483647), start: Metadata::new(1, 1), end: Metadata::new(1, 11) } );
     #[rustfmt::skip]
-    assert_eq!(errors[0], ScannerError::IntegerOverflow { start: Metadata::new(2, 1), end: Metadata::new(2, 11) } );
+    assert_eq!(errors[0], LexError::IntegerOverflow { start: Metadata::new(2, 1), end: Metadata::new(2, 11) } );
     #[rustfmt::skip]
     assert_eq!(tokens[1], TokenWithMetadata { token: Token::Dash, start: Metadata::new(3, 1), end: Metadata::new(3, 2) } );
     #[rustfmt::skip]
@@ -698,7 +710,7 @@ while1                                                                      \n\
     #[rustfmt::skip]
     assert_eq!(tokens[3], TokenWithMetadata { token: Token::Dash, start: Metadata::new(4, 1), end: Metadata::new(4, 2) } );
     #[rustfmt::skip]
-    assert_eq!(errors[1], ScannerError::IntegerOverflow { start: Metadata::new(4, 2), end: Metadata::new(4, 12) } );
+    assert_eq!(errors[1], LexError::IntegerOverflow { start: Metadata::new(4, 2), end: Metadata::new(4, 12) } );
 
     assert_eq!(tokens.last().unwrap().token, Token::EOF);
   }
@@ -711,7 +723,7 @@ while1                                                                      \n\
 (    !    &    !=    --    ++                                               \n\
 }    )    ;    /    *    ->                                                 \n\
 ";
-    let results = scanner().input(&input).call();
+    let results = lex().input(&input).call();
     let tokens = results.0;
     let errors = results.1;
 

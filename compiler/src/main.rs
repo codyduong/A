@@ -1,4 +1,4 @@
-mod scanner;
+mod lex;
 mod util;
 
 use clap::command;
@@ -21,7 +21,7 @@ fn main() -> io::Result<()> {
 
   let content = fs::read_to_string(&args.infile)?;
 
-  let (tokens, errors) = scanner::scanner().input(&content).call();
+  let (tokens, errors) = lex::lex().input(&content).call();
 
   let tokens_result = tokens.to_string();
   if let Some(tokens_file) = args.tokens_file {
