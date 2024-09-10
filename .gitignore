@@ -3,3 +3,5 @@ ac
 *.a
 *.txt
 /target
+p1
+*.tgz

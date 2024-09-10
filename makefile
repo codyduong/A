@@ -27,6 +27,8 @@ clean:
 	cargo clean
 	rm ./a
 	rm ./a.exe
+	rm ./target -r
+	rm *.txt
 
 .PHONY: run
 run: build
