@@ -2,21 +2,14 @@ PROJECT_NAME := ac
 
 MAIN_DIR = .
 TARGET_DIR = target/release
-UNAME_S := $(shell uname -s | tr '[:upper:]' '[:lower:]')
 
 .PHONY: all
 all: build
 
-ifeq ($(OS), Windows_NT)
-    EXECUTABLE = $(PROJECT_NAME).exe
-else
-    EXECUTABLE = $(PROJECT_NAME)
-endif
-
 .PHONY: build
 build:
 	cargo build --release
-	cp $(TARGET_DIR)/$(EXECUTABLE) $(MAIN_DIR)/$(EXECUTABLE)
+	cp $(TARGET_DIR)/$(PROJECT_NAME) $(MAIN_DIR)/$(PROJECT_NAME)
 
 .PHONY: test
 test:
@@ -25,8 +18,8 @@ test:
 .PHONY: clean
 clean:
 	cargo clean
-	rm ./a
-	rm ./a.exe
+	rm ./ac
+	rm ./ac.exe
 	rm ./target -r
 	rm *.txt
 

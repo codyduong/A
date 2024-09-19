@@ -40,7 +40,7 @@ impl Sub for Metadata {
   }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub(crate) struct TokenWithMetadata {
   pub(crate) token: Token,
   pub(crate) start: Metadata,
@@ -124,7 +124,7 @@ fn escape_string(s: &str) -> std::borrow::Cow<'_, str> {
 pub(crate) enum Token {
   /* Literals */
   StringLiteral(String),
-  IntLiteral(i64),
+  IntLiteral(i32),
   Identifier(String),
 
   /* Symbols */

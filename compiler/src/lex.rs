@@ -482,7 +482,7 @@ pub(crate) fn lex(input: &str) -> (VecWrapper<TokenWithMetadata>, VecWrapper<Lex
         Ok(token) => tokens.push(token),
         Err(err) => errors.push(err),
       },
-      c if c.is_ascii() => {
+      c if c.is_ascii_alphanumeric() || c == '_' => {
         match parse_keyword_or_identifier()
           .chars(&mut chars)
           .line(&mut line)
