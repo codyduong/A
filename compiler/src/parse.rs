@@ -5,6 +5,7 @@ use crate::ast::Expr;
 use crate::ast::FnDecl;
 use crate::ast::Literal;
 use crate::ast::Param;
+use crate::ast::Program;
 use crate::ast::Stmt;
 use crate::ast::Type;
 use crate::ast::UnaryOp;
@@ -89,12 +90,12 @@ impl<'a> Parser<'a> {
     }
   }
 
-  pub(crate) fn parse_program(&mut self) -> Result<Vec<Decl>, ParseError> {
+  pub(crate) fn parse_program(&mut self) -> Result<Program, ParseError> {
     let mut decls = Vec::new();
     while self.current_token().is_some_and(|t| t.token != Token::EOF) {
       decls.push(self.parse_decl()?);
     }
-    Ok(decls)
+    Ok(Program(decls))
   }
 
   fn parse_decl(&mut self) -> Result<Decl, ParseError> {
@@ -955,13 +956,13 @@ my_function:(
         .into_iter()
         .map(Into::<Decl>::into)
         .collect::<Vec<Decl>>(),
-      asts.drain(..16).collect::<Vec<Decl>>()
+      asts.0.drain(..16).collect::<Vec<Decl>>()
     );
     assert_eq!(
       shared_fns.iter().take(16).cloned().collect::<Vec<Decl>>(),
-      asts.drain(..16).collect::<Vec<Decl>>()
+      asts.0.drain(..16).collect::<Vec<Decl>>()
     );
-    assert_eq!(shared_fns[16], asts.drain(..1).collect::<Vec<Decl>>()[0]);
+    assert_eq!(shared_fns[16], asts.0.drain(..1).collect::<Vec<Decl>>()[0]);
 
     #[rustfmt::skip]
     let class_joined: Vec<Decl> = shared_decls.clone().into_iter().map(Into::<Decl>::into).chain(shared_fns).collect();
@@ -970,6 +971,6 @@ my_function:(
       body: class_joined,
     };
 
-    assert_eq!(class, asts.drain(..1).collect::<Vec<Decl>>()[0]);
+    assert_eq!(class, asts.0.drain(..1).collect::<Vec<Decl>>()[0]);
   }
 }
